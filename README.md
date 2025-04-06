@@ -1,97 +1,84 @@
-## 📘 프로젝트 주제: Context API로 드롭다운 컴포넌트 만들기
+## 🧠 프로젝트 미션: Context 기반 커스텀 드롭다운 컴포넌트 만들기
 
-### 🎯 목표
+### 🎯 미션 목표
 
-- React Context API를 활용해 **여러 드롭다운 컴포넌트 간의 상태를 공유**하는 구조 설계 연습
-- 전역 상태가 아닌 **트리 내부에서만 필요한 상태 관리** 구현
-
----
-
-### 📁 기능 요구사항
-
-- 여러 개의 드롭다운이 동시에 존재 가능 ✅
-- 한 번에 **하나의 드롭다운만** 열릴 수 있음 🔄
-- 드롭다운 외부 클릭 시 자동으로 닫힘 ⛔
-- 드롭다운 항목 클릭 시 닫히고 액션 발생 🖱️
-- 키보드 조작 (`Esc`, `Tab`) 지원 (선택 과제) ⌨️
+- Context API를 활용해 드롭다운 컴포넌트를 설계하고, 내부 상태 및 선택값을 전역 없이 공유할 수 있도록 구성한다.
+- `Dropdown`, `DropdownItem`, `DropdownButton` 세 가지 컴포넌트를 만들고, 드롭다운 메뉴의 재사용성과 조합 유연성을 높인다.
 
 ---
 
-### 🧩 주요 개념
+### ✅ 구현 컴포넌트
 
-- React Context API (`createContext`, `useContext`)
-- 컴포넌트 트리 상태 공유
-- 커스텀 훅으로 역할 분리 (`useDropdown`, `useOutsideClick` 등)
-- 이벤트 버블링과 리액트의 synthetic event 처리
-- 접근성 고려 (ARIA, 키보드 접근 등)
+#### 1. `<Dropdown />`
 
----
+- Context를 생성하고, 내부에 있는 `DropdownItem`과 `DropdownButton`에게 상태를 전달함
+- 내부 자식 요소를 탐색하여 `DropdownItem`은 모두 렌더링, `DropdownButton`은 맨 아래에 렌더링
+- props: `onChange(id: string)` 전달
 
-### ⚙️ 컴포넌트 구조 예시
+#### 2. `<DropdownItem />`
 
-````txt
-<DropdownProvider>
-  <Dropdown id="menu1">
-    <DropdownTrigger>...</DropdownTrigger>
-    <DropdownMenu>...</DropdownMenu>
-  </Dropdown>
+- 드롭다운 메뉴 항목을 나타냄
+- 클릭 시 Context의 `setSelectedItem()` 실행 후 `onChange(id)` 콜백 호출
+- 클릭된 항목은 `selectedItem`과 비교해 강조 스타일 적용
 
-  <Dropdown id="menu2">
-    <DropdownTrigger>...</DropdownTrigger>
+#### 3. `<DropdownButton />`
+
+- 현재 선택된 항목(`selectedItem`)을 기반으로 버튼 텍스트 표시
+- 클릭 시 메뉴를 열거나 닫는 역할 (선택 구현)
 
 ---
 
-### 🛠️ 개발 단계 가이드
-
-1. `DropdownContext` 생성 - 열려있는 드롭다운 ID 관리
-2. `DropdownProvider`에서 context 값 제공 (openId, setOpenId)
-3. `Dropdown`은 본인 ID와 context의 openId 비교해 열림 여부 판단
-4. `DropdownTrigger` 클릭 시 openId 변경
-5. `DropdownMenu`는 열려있을 때만 렌더링
-6. 외부 클릭 감지 (`useRef` + `useEffect`)로 닫기 처리
-7. (선택) 키보드 접근성 대응 (`Escape`, `Tab`, ARIA role 등)
-
----
-
-### 🧪 예시 코드 스니펫
-
-<details>
-  <summary>DropdownProvider.tsx</summary>
+### 🔧 제공 Context 값
 
 ```tsx
-export const DropdownContext = createContext({
-  openId: null,
-  setOpenId: () => {},
-});
-
-export function DropdownProvider({ children }) {
-  const [openId, setOpenId] = useState(null);
-  const value = { openId, setOpenId };
-
-  return (
-    <DropdownContext.Provider value={value}>
-      {children}
-    </DropdownContext.Provider>
-  );
+interface DropdownContextProps {
+  selectedItem: string;
+  setSelectedItem: Dispatch<SetStateAction<string>>;
+  onChange: (id: string) => void;
 }
-````
-
-</details>
+```
 
 ---
 
-### 🚀 확장 아이디어
+### 📁 사용 예시
 
-- 드롭다운 메뉴에 애니메이션 추가 (framer-motion)
-- 메뉴 내부 항목을 props로 동적으로 구성
-- 드롭다운 상태를 전역으로 확장 (예: Modal과 상태 통합)
+```tsx
+<Dropdown onChange={(id) => console.log('선택된 값:', id)}>
+  <DropdownItem id="a">🍕 피자</DropdownItem>
+  <DropdownItem id="b">🍔 햄버거</DropdownItem>
+  <DropdownItem id="c">🍗 치킨</DropdownItem>
+  <DropdownButton />
+</Dropdown>
+```
 
 ---
 
-### ✅ 이 프로젝트로 복습 가능한 것
+### 📌 구현 포인트
 
-- Context API의 실전 활용
-- 컴포넌트 분리 & 책임 분담 설계
-- 이벤트 처리 및 외부 클릭 감지
-- 접근성 고려한 UI 설계
-- 리액트 렌더링 흐름과 최적화 마인드
+- Context로 `selectedItem`, `setSelectedItem`, `onChange` 제공
+- `Children.toArray()` + `child.type === 컴포넌트` 로 자식 분리
+- `cloneElement` 로 props 주입
+- `DropdownItem` 클릭 시 `setSelectedItem`, `onChange` 실행
+- `DropdownButton`은 현재 선택된 항목을 보여주는 버튼 역할
+
+---
+
+### 💡 확장 과제 (선택)
+
+- Dropdown 열림/닫힘 상태 관리 (`isOpen`, `setIsOpen`)
+- 외부 클릭 시 메뉴 닫기 (`useRef + useEffect`)
+- 키보드 접근성 (`Enter`, `Esc` 처리)
+- `DropdownItem`에 아이콘이나 비활성화 상태 추가
+
+---
+
+### ✅ 이 미션으로 복습할 수 있는 것
+
+- Context API 실전 활용 (상태 + 함수 공유)
+- 컴포넌트 조합 & 재사용 설계
+- React.Children, cloneElement 사용법
+- 컴포넌트 간 명확한 역할 분리와 UI 구성
+
+---
+
+🔥 **목표는 단순 드롭다운을 넘어서, 조합 가능한 UI 컴포넌트를 직접 설계하는 감각을 기르는 것!**
